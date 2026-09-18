@@ -167,22 +167,28 @@ td.wrap{white-space:normal;min-width:180px}
     <div class="card-b">
       <h1>구글 계정으로 들어오십시오</h1>
       <p>이 화면은 숫자를 저장하지 않습니다. 로그인한 분의 권한으로 BigQuery에서 그때그때 받아옵니다.
-         권한이 없으면 아무것도 보이지 않습니다.</p>
+         <b>권한이 없는 계정은 들어와도 아무것도 보이지 않습니다.</b>
+         프로젝트와 데이터셋은 로그인한 뒤 화면이 알아서 찾습니다.</p>
       <div id="gateMsg"></div>
-      <div class="dgrid" style="margin-bottom:12px">
-        <div class="fld">
-          <span>OAuth 클라이언트 ID <b>(처음 한 번만)</b></span>
-          <input id="clientId" type="text" placeholder="0000-xxxx.apps.googleusercontent.com" autocomplete="off">
-        </div>
-        <div class="fld">
-          <span>BigQuery 프로젝트 ID</span>
-          <input id="projId" type="text" placeholder="project-xxxxxxxx-xxxx-xxxx-xxx" autocomplete="off">
-        </div>
-        <div class="fld">
-          <span>데이터셋</span>
-          <input id="dsId" type="text" placeholder="데이터셋 이름" autocomplete="off">
-        </div>
+      <div class="fld" style="margin-bottom:10px">
+        <span>OAuth 클라이언트 ID <b>(처음 한 번만)</b></span>
+        <input id="clientId" type="text" placeholder="0000-xxxx.apps.googleusercontent.com" autocomplete="off">
       </div>
+      <details style="margin-bottom:12px">
+        <summary style="font-size:12.5px;color:var(--ink2);cursor:pointer">
+          프로젝트·데이터셋 직접 지정 — 보통은 건드리지 않으셔도 됩니다
+        </summary>
+        <div class="dgrid" style="margin-top:9px">
+          <div class="fld">
+            <span>BigQuery 프로젝트 ID</span>
+            <input id="projId" type="text" placeholder="비워 두면 찾아냅니다" autocomplete="off">
+          </div>
+          <div class="fld">
+            <span>데이터셋</span>
+            <input id="dsId" type="text" placeholder="비워 두면 찾아냅니다" autocomplete="off">
+          </div>
+        </div>
+      </details>
       <div class="bar" style="margin-bottom:15px">
         <button id="btnLogin" class="btn">구글 로그인</button>
         <button id="btnForget" class="btn ghost sm">저장된 ID 지우기</button>
@@ -428,7 +434,21 @@ function eok(v){
 function pct(v, d){ return v==null||v===''?'':Number(v).toFixed(d==null?1:d)+'%'; }
 
 /* ════════════════ 인증 ════════════════ */
+/* 링크에 담아 보낸 값을 받는다 — ?c=클라이언트ID&p=프로젝트&d=데이터셋
+   한 번 열면 이 브라우저에 남으므로 다음부터는 주소만 열면 된다.
+   받은 뒤 주소창에서 지워 이력에 남지 않게 한다. */
+function takeFromLink(){
+  var q = new URLSearchParams(location.search);
+  var map = { c: LS.cid, p: LS.proj, d: LS.ds }, got = false;
+  Object.keys(map).forEach(function(k){
+    var v = (q.get(k) || '').trim();
+    if(v){ try{ localStorage.setItem(map[k], v); }catch(e){} got = true; }
+  });
+  if(got){ try{ history.replaceState(null, '', location.origin + location.pathname); }catch(e){} }
+}
+
 function initAuth(){
+  takeFromLink();
   /* 「승인된 JavaScript 원본」에 넣는 것은 주소의 앞부분(스킴+호스트)뿐이다.
      뒤 경로까지 넣으면 구글이 받지 않는다. 그래서 origin 만 보여 준다. */
   document.getElementById('curOrigin').textContent = location.origin;
@@ -452,10 +472,14 @@ function login(){
   var pj  = document.getElementById('projId').value.trim();
   var ds  = document.getElementById('dsId').value.trim();
   if(!cid){ say('gateMsg','err','클라이언트 ID를 먼저 넣어 주십시오.'); return; }
-  if(!okName(pj,'proj')){ say('gateMsg','err','프로젝트 ID 를 확인해 주십시오. 영문·숫자·붙임표만 쓸 수 있습니다.'); return; }
-  if(!okName(ds,'ds')){   say('gateMsg','err','데이터셋 이름을 확인해 주십시오. 영문·숫자·밑줄만 쓸 수 있습니다.'); return; }
+  /* 비워 두시면 로그인 뒤에 화면이 찾아낸다. 적으셨다면 글자만 검사한다. */
+  if(pj && !okName(pj,'proj')){ say('gateMsg','err','프로젝트 ID 를 확인해 주십시오.'); return; }
+  if(ds && !okName(ds,'ds')){   say('gateMsg','err','데이터셋 이름을 확인해 주십시오.'); return; }
   PROJECT = pj; DATASET = ds;
-  try{ localStorage.setItem(LS.proj, pj); localStorage.setItem(LS.ds, ds); }catch(e){}
+  try{
+    if(pj) localStorage.setItem(LS.proj, pj); else localStorage.removeItem(LS.proj);
+    if(ds) localStorage.setItem(LS.ds, ds);   else localStorage.removeItem(LS.ds);
+  }catch(e){}
   if(!window.google || !google.accounts || !google.accounts.oauth2){
     say('gateMsg','err','구글 로그인 스크립트를 아직 못 받았습니다. 잠시 뒤 다시 눌러 주십시오.<br>'+
       '계속 안 되면 이 화면이 <b>파일로 직접 열린 것</b>일 수 있습니다. 주소(http/https)로 열어야 합니다.');
@@ -481,6 +505,38 @@ function login(){
   }
 }
 
+/* BigQuery 에 그냥 물어보는 짧은 도움함수 */
+async function gapi(path){
+  var r = await fetch('https://bigquery.googleapis.com/bigquery/v2' + path,
+                      {headers:{'Authorization':'Bearer '+token}});
+  if(!r.ok) return null;
+  return await r.json();
+}
+
+/* 프로젝트와 데이터셋을 찾아낸다.
+   이름을 짐작하지 않고, **관리 표(crm_subject)가 실제로 있는 곳**을 찾는다.
+   그래야 코드에 회사 이름을 적어 두지 않아도 되고, 이름이 바뀌어도 따라간다. */
+async function findHome(){
+  busy(true, '어느 곳을 보면 되는지 찾는 중…');
+  try{
+    var pj = await gapi('/projects?maxResults=50');
+    var projects = (pj && pj.projects) ? pj.projects.map(function(x){ return x.projectReference.projectId; }) : [];
+    if(!projects.length) return null;
+    for(var i=0; i<projects.length && i<20; i++){
+      var P = projects[i];
+      var dl = await gapi('/projects/'+encodeURIComponent(P)+'/datasets?maxResults=100');
+      var dss = (dl && dl.datasets) ? dl.datasets.map(function(x){ return x.datasetReference.datasetId; }) : [];
+      for(var j=0; j<dss.length && j<50; j++){
+        var D = dss[j];
+        var t = await gapi('/projects/'+encodeURIComponent(P)+'/datasets/'+encodeURIComponent(D)+'/tables/crm_subject');
+        if(t && t.tableReference){ return { p:P, d:D }; }
+      }
+    }
+    return null;
+  }catch(e){ return null; }
+  finally{ busy(false); }
+}
+
 async function afterLogin(){
   document.getElementById('gate').classList.add('hide');
   document.getElementById('app').classList.remove('hide');
@@ -492,6 +548,26 @@ async function afterLogin(){
   }catch(e){}
   if(!me) me = '(계정 미확인)';
   document.getElementById('who').textContent = me;
+
+  /* 프로젝트·데이터셋을 안 넣으셨으면 찾는다. 찾으면 이 브라우저에 남겨 다음부터 건너뛴다. */
+  if(!PROJECT || !DATASET){
+    var home = await findHome();
+    if(home){
+      PROJECT = home.p; DATASET = home.d;
+      try{ localStorage.setItem(LS.proj, PROJECT); localStorage.setItem(LS.ds, DATASET); }catch(e){}
+    } else {
+      document.getElementById('app').classList.add('hide');
+      document.getElementById('gate').classList.remove('hide');
+      say('gateMsg','err',
+        '<b>'+esc(me)+'</b> 계정으로는 볼 수 있는 곳이 없습니다.<br><br>'+
+        '두 가지 가운데 하나입니다.<br>'+
+        '① 이 계정에 <b>BigQuery 권한이 없습니다.</b> '+
+        '관리자에게 <code>bigquery.jobUser</code> 와 <code>bigquery.dataViewer</code>(또는 <code>dataEditor</code>)를 요청해 주십시오.<br>'+
+        '② 관리 표가 아직 만들어지지 않았습니다.<br><br>'+
+        '프로젝트와 데이터셋을 아신다면 아래 <b>「프로젝트·데이터셋 직접 지정」</b>을 펴서 넣어 보십시오.');
+      return;
+    }
+  }
   loadAll();
 }
 

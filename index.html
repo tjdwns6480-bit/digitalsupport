@@ -1,0 +1,1342 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- 이 화면이 말을 걸 수 있는 곳을 못 박는다. 다른 데로 자료가 나가는 길을 막는다. -->
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'none';
+  script-src 'self' 'unsafe-inline' https://accounts.google.com;
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+  font-src https://fonts.gstatic.com;
+  img-src 'self' data:;
+  connect-src https://bigquery.googleapis.com https://www.googleapis.com https://accounts.google.com;
+  frame-src https://accounts.google.com;
+  form-action 'none';
+  base-uri 'none'">
+<title>고액구매고객 관리</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap');
+
+:root{
+  --paper:#f1f4f3; --card:#ffffff; --ink:#16211f; --ink2:#5c6a68;
+  --line:#dde3e1; --line2:#edf1f0;
+  --accent:#0f5c5b; --accent-soft:#e1efed; --accent-ink:#0b4241;
+  --ok:#15703f; --ok-soft:#e3f2e9;
+  --wait:#8a5c00; --wait-soft:#f7eeda;
+  --late:#a8332a; --late-soft:#f8e7e5;
+  --up:#1d4ed8; --up-soft:#e4ebfb;
+  --shadow:0 1px 2px rgba(22,33,31,.07);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#101514; --card:#181f1e; --ink:#e7eceb; --ink2:#94a4a1;
+    --line:#2a3433; --line2:#212a29;
+    --accent:#5ecfc2; --accent-soft:#16302e; --accent-ink:#8ee2d8;
+    --ok:#54bd83; --ok-soft:#152b20;
+    --wait:#d8a54a; --wait-soft:#2b2317;
+    --late:#e8776c; --late-soft:#2e1a18;
+    --up:#7ea6f5; --up-soft:#16203a;
+    --shadow:0 1px 2px rgba(0,0,0,.45);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#101514; --card:#181f1e; --ink:#e7eceb; --ink2:#94a4a1;
+  --line:#2a3433; --line2:#212a29;
+  --accent:#5ecfc2; --accent-soft:#16302e; --accent-ink:#8ee2d8;
+  --ok:#54bd83; --ok-soft:#152b20;
+  --wait:#d8a54a; --wait-soft:#2b2317;
+  --late:#e8776c; --late-soft:#2e1a18;
+  --up:#7ea6f5; --up-soft:#16203a;
+  --shadow:0 1px 2px rgba(0,0,0,.45);
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"IBM Plex Sans KR","Apple SD Gothic Neo",system-ui,sans-serif;
+  font-size:14.5px;line-height:1.6;-webkit-text-size-adjust:100%}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ── 상단 ── */
+.top{position:sticky;top:0;z-index:30;background:var(--card);border-bottom:1px solid var(--line)}
+.top-in{max-width:1400px;margin:0 auto;padding:11px 16px;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.brand{font-weight:700;letter-spacing:-.02em;font-size:16.5px;margin:0}
+.brand span{color:var(--accent);font-weight:600}
+.top-meta{color:var(--ink2);font-size:12.5px;margin-left:auto;display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+.linkbtn{background:none;border:none;color:var(--ink2);font-size:12.5px;padding:2px 4px;text-decoration:underline}
+.linkbtn:hover{color:var(--accent)}
+.tabs{max-width:1400px;margin:0 auto;padding:0 8px;display:flex;gap:2px;overflow-x:auto}
+.tab{background:none;border:none;border-bottom:2px solid transparent;color:var(--ink2);
+  padding:9px 13px;font-size:14px;font-weight:500;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.tab .cnt{font-size:11.5px;color:var(--ink2);margin-left:5px}
+
+/* ── 틀 ── */
+.wrap{max-width:1400px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);margin-bottom:14px}
+.card-h{padding:11px 14px;border-bottom:1px solid var(--line2);display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.card-h h2{margin:0;font-size:14.5px;font-weight:600;letter-spacing:-.01em}
+.card-h .sub{font-size:12px;color:var(--ink2)}
+.card-b{padding:12px 14px}
+.card-b.flush{padding:0}
+
+/* ── 지표 ── */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:1px;background:var(--line2)}
+.kpi{background:var(--card);padding:11px 13px}
+.kpi .k{font-size:11.5px;color:var(--ink2)}
+.kpi .v{font-size:19px;font-weight:600;letter-spacing:-.02em;margin-top:2px}
+.kpi .n{font-size:11px;color:var(--ink2)}
+
+/* ── 걸개 ── */
+.bar{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.bar input[type=search],.bar input[type=text],.bar input[type=date],.bar select,.bar input[type=number]{
+  background:var(--paper);border:1px solid var(--line);border-radius:7px;padding:6px 9px;font-size:13px}
+.bar input[type=search]{min-width:190px}
+.bar label{font-size:12.5px;color:var(--ink2);display:flex;align-items:center;gap:5px}
+.btn{background:var(--accent);color:#fff;border:none;border-radius:7px;padding:7px 13px;font-size:13px;font-weight:500}
+.btn:hover{filter:brightness(1.08)}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.btn.ghost{background:var(--paper);color:var(--ink);border:1px solid var(--line)}
+.btn.sm{padding:4px 9px;font-size:12px}
+.spacer{flex:1}
+
+/* ── 표 ── */
+.tw{overflow:auto;max-height:66vh}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{position:sticky;top:0;z-index:2;background:var(--card);border-bottom:1px solid var(--line);
+  padding:8px 9px;text-align:left;font-weight:600;font-size:12px;color:var(--ink2);white-space:nowrap;cursor:pointer;user-select:none}
+thead th.no-sort{cursor:default}
+thead th .ar{opacity:.45;font-size:10px}
+tbody td{border-bottom:1px solid var(--line2);padding:7px 9px;white-space:nowrap}
+tbody tr:hover{background:var(--accent-soft)}
+tbody tr.sel{background:var(--accent-soft)}
+td.num,th.num{text-align:right;font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+td.wrap{white-space:normal;min-width:180px}
+.empty{padding:26px 14px;text-align:center;color:var(--ink2);font-size:13px}
+
+/* ── 꼬리표 ── */
+.tag{display:inline-block;padding:1px 7px;border-radius:99px;font-size:11.5px;font-weight:500;white-space:nowrap}
+.t-ok{background:var(--ok-soft);color:var(--ok)}
+.t-wait{background:var(--wait-soft);color:var(--wait)}
+.t-late{background:var(--late-soft);color:var(--late)}
+.t-up{background:var(--up-soft);color:var(--up)}
+.t-plain{background:var(--line2);color:var(--ink2)}
+.t-acc{background:var(--accent-soft);color:var(--accent-ink)}
+
+/* ── 상세 ── */
+.detail{border-top:2px solid var(--accent)}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:11px}
+.fld{display:flex;flex-direction:column;gap:3px}
+.fld span{font-size:11.5px;color:var(--ink2)}
+.fld input,.fld select,.fld textarea{background:var(--paper);border:1px solid var(--line);border-radius:7px;padding:6px 9px;font-size:13px;width:100%}
+.fld textarea{min-height:58px;resize:vertical}
+.sect{font-size:12.5px;font-weight:600;color:var(--ink2);margin:14px 0 7px;padding-bottom:5px;border-bottom:1px solid var(--line2)}
+
+/* ── 알림 ── */
+.msg{padding:9px 13px;border-radius:8px;font-size:13px;margin-bottom:11px;border:1px solid transparent}
+.msg.err{background:var(--late-soft);color:var(--late);border-color:var(--late)}
+.msg.ok{background:var(--ok-soft);color:var(--ok);border-color:var(--ok)}
+.msg.info{background:var(--accent-soft);color:var(--accent-ink);border-color:var(--accent)}
+.msg pre{margin:6px 0 0;white-space:pre-wrap;font-size:11.5px;font-family:"IBM Plex Mono",monospace}
+
+/* ── 로그인 ── */
+.gate{max-width:560px;margin:8vh auto;padding:0 16px}
+.gate .card-b{padding:20px}
+.gate h1{font-size:19px;margin:0 0 6px;letter-spacing:-.02em}
+.gate p{color:var(--ink2);font-size:13.5px;margin:0 0 15px}
+.gate ol{color:var(--ink2);font-size:13px;padding-left:20px;margin:0 0 15px}
+.gate ol li{margin-bottom:5px}
+.gate code{background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:12px;
+  font-family:"IBM Plex Mono",monospace;word-break:break-all}
+.hide{display:none!important}
+.busy{position:fixed;inset:0;background:rgba(0,0,0,.18);display:flex;align-items:center;justify-content:center;z-index:50}
+.busy div{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:13px 20px;font-size:13.5px;box-shadow:var(--shadow)}
+.foot{color:var(--ink2);font-size:11.5px;text-align:center;padding:6px 0 22px;line-height:1.7}
+</style>
+</head>
+<body>
+
+<!-- ══════════ 로그인 ══════════ -->
+<div id="gate" class="gate">
+  <div class="card">
+    <div class="card-h"><h2>고액구매고객 관리</h2><span class="sub">BigQuery 직결</span></div>
+    <div class="card-b">
+      <h1>구글 계정으로 들어오십시오</h1>
+      <p>이 화면은 숫자를 저장하지 않습니다. 로그인한 분의 권한으로 BigQuery에서 그때그때 받아옵니다.
+         권한이 없으면 아무것도 보이지 않습니다.</p>
+      <div id="gateMsg"></div>
+      <div class="dgrid" style="margin-bottom:12px">
+        <div class="fld">
+          <span>OAuth 클라이언트 ID <b>(처음 한 번만)</b></span>
+          <input id="clientId" type="text" placeholder="0000-xxxx.apps.googleusercontent.com" autocomplete="off">
+        </div>
+        <div class="fld">
+          <span>BigQuery 프로젝트 ID</span>
+          <input id="projId" type="text" placeholder="project-xxxxxxxx-xxxx-xxxx-xxx" autocomplete="off">
+        </div>
+        <div class="fld">
+          <span>데이터셋</span>
+          <input id="dsId" type="text" placeholder="데이터셋 이름" autocomplete="off">
+        </div>
+      </div>
+      <div class="bar" style="margin-bottom:15px">
+        <button id="btnLogin" class="btn">구글 로그인</button>
+        <button id="btnForget" class="btn ghost sm">저장된 ID 지우기</button>
+      </div>
+      <div class="sect">처음 쓰실 때 준비할 것</div>
+      <ol>
+        <li>구글 클라우드 콘솔 → <code>Google Auth Platform</code> → <code>클라이언트</code> →
+            <b>웹 애플리케이션</b>으로 만듭니다.</li>
+        <li><b>승인된 JavaScript 원본</b>에 이 화면의 주소를 넣습니다.
+            지금 주소는 <code id="curOrigin"></code> 입니다.</li>
+        <li>계정에 <code>roles/bigquery.jobUser</code>와 <code>roles/bigquery.dataEditor</code>를 줍니다.
+            보기만 하실 분은 뒤엣것을 <code>dataViewer</code>로 둡니다.</li>
+        <li>만들어진 <b>클라이언트 ID</b>를 위 칸에 넣습니다. 이 브라우저에만 기억되고 서버로 가지 않습니다.
+            <b>보안 비밀번호는 넣지 않습니다. 필요하지 않습니다.</b></li>
+      </ol>
+      <p style="font-size:12.5px;margin:0">
+        고객 실명과 휴대전화는 이 화면에 없습니다. 사장님 PC 엑셀에만 둡니다.
+        여기서는 <b>관리대상ID</b>와 멤버스 번호로만 가리킵니다.</p>
+    </div>
+  </div>
+  <p class="foot">고객 관리 화면</p>
+</div>
+
+<!-- ══════════ 본화면 ══════════ -->
+<div id="app" class="hide">
+<header class="top">
+  <div class="top-in">
+    <h1 class="brand">고액구매고객 <span>관리</span></h1>
+    <div class="top-meta">
+      <span id="asof" class="mono"></span>
+      <span id="who"></span>
+      <button id="btnReload" class="linkbtn">새로고침</button>
+      <button id="btnTheme" class="linkbtn">화면밝기</button>
+      <button id="btnOut" class="linkbtn">나가기</button>
+    </div>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" data-tab="subj"  aria-selected="true">관리대상 <span class="cnt" id="cSubj"></span></button>
+    <button class="tab" role="tab" data-tab="cand"  aria-selected="false">등록후보 <span class="cnt" id="cCand"></span></button>
+    <button class="tab" role="tab" data-tab="alert" aria-selected="false">이상징후 <span class="cnt" id="cAlert"></span></button>
+    <button class="tab" role="tab" data-tab="hist"  aria-selected="false">접촉이력 <span class="cnt" id="cHist"></span></button>
+    <button class="tab" role="tab" data-tab="send"  aria-selected="false">발송모수 <span class="cnt" id="cSend"></span></button>
+    <button class="tab" role="tab" data-tab="cfg"   aria-selected="false">기준값</button>
+  </nav>
+</header>
+
+<div class="wrap">
+  <div id="msg"></div>
+
+  <!-- ── 관리대상 ── -->
+  <section id="pane-subj">
+    <div class="card"><div class="kpis" id="subjKpi"></div></div>
+    <div class="card">
+      <div class="card-h">
+        <h2>관리대상</h2>
+        <span class="sub">업자는 묶인 계정 전체를 합쳐 한 줄입니다</span>
+        <div class="spacer"></div>
+        <button class="btn ghost sm" data-csv="subj">CSV</button>
+      </div>
+      <div class="card-b">
+        <div class="bar">
+          <input type="search" id="qSubj" placeholder="별칭·ID·멤버스번호·브랜드 검색">
+          <select id="fKind"><option value="">종류 전체</option><option>업자</option><option>개인</option></select>
+          <select id="fStatus"><option value="">상태 전체</option></select>
+          <select id="fGrade"><option value="">등급 전체</option></select>
+          <select id="fOwner"><option value="">담당 전체</option></select>
+          <select id="fAlert"><option value="">움직임 전체</option><option>중단</option><option>급감</option><option>급증</option><option>신규</option><option>정상</option><option>실적없음</option></select>
+          <div class="spacer"></div>
+          <button class="btn sm" id="btnNewSubj">개인 대상 직접 추가</button>
+        </div>
+      </div>
+      <div class="card-b flush"><div class="tw"><table id="tSubj"></table></div></div>
+    </div>
+    <div class="card detail hide" id="detail"></div>
+  </section>
+
+  <!-- ── 등록후보 ── -->
+  <section id="pane-cand" class="hide">
+    <div class="card"><div class="kpis" id="candKpi"></div></div>
+    <div class="card">
+      <div class="card-h">
+        <h2>등록후보</h2>
+        <span class="sub">문턱 이상인데 아직 관리대상으로 올리지 않은 회원입니다</span>
+        <div class="spacer"></div>
+        <button class="btn ghost sm" data-csv="cand">CSV</button>
+      </div>
+      <div class="card-b">
+        <div class="bar">
+          <input type="search" id="qCand" placeholder="멤버스번호·브랜드 검색">
+          <select id="fCandType"><option value="">유형 전체</option><option>일반</option><option>리셀</option><option>특판</option><option value="__null">미판정</option></select>
+          <select id="fCandAlert"><option value="">움직임 전체</option><option>중단</option><option>급감</option><option>급증</option><option>신규</option><option>정상</option></select>
+          <label>매출 <input type="number" id="fCandMin" placeholder="최소(원)" style="width:118px"></label>
+          <div class="spacer"></div>
+          <span class="sub" id="candPick">고른 것 0</span>
+          <button class="btn sm" id="btnAddOne">고른 것을 각각 개인으로 등재</button>
+          <button class="btn sm" id="btnAddGroup">고른 것을 한 업자로 묶기</button>
+        </div>
+      </div>
+      <div class="card-b flush"><div class="tw"><table id="tCand"></table></div></div>
+    </div>
+  </section>
+
+  <!-- ── 이상징후 ── -->
+  <section id="pane-alert" class="hide">
+    <div class="card">
+      <div class="card-h"><h2>이상징후</h2>
+        <span class="sub">기준값 탭에서 판정 조건을 바꾸실 수 있습니다</span>
+        <div class="spacer"></div>
+        <button class="btn ghost sm" data-csv="alert">CSV</button></div>
+      <div class="card-b">
+        <div class="bar">
+          <input type="search" id="qAlert" placeholder="검색">
+          <select id="fAlertKind"><option value="">전체</option><option value="등재">등재된 대상만</option><option value="후보">후보만</option></select>
+          <select id="fAlertType"><option value="">움직임 전체</option><option>중단</option><option>급감</option><option>급증</option><option>신규</option></select>
+        </div>
+      </div>
+      <div class="card-b flush"><div class="tw"><table id="tAlert"></table></div></div>
+    </div>
+  </section>
+
+  <!-- ── 접촉이력 ── -->
+  <section id="pane-hist" class="hide">
+    <div class="card">
+      <div class="card-h"><h2>접촉이력</h2>
+        <span class="sub">실명은 적지 않습니다. 대상ID로 가리킵니다</span>
+        <div class="spacer"></div>
+        <button class="btn ghost sm" data-csv="hist">CSV</button></div>
+      <div class="card-b">
+        <div class="bar">
+          <input type="search" id="qHist" placeholder="내용·반응·대상 검색">
+          <label>기한 지난 것만 <input type="checkbox" id="fHistDue"></label>
+        </div>
+      </div>
+      <div class="card-b flush"><div class="tw"><table id="tHist"></table></div></div>
+    </div>
+  </section>
+
+  <!-- ── 발송모수 ── -->
+  <section id="pane-send" class="hide">
+    <div class="card">
+      <div class="card-h"><h2>발송모수</h2>
+        <span class="sub"><b>문자수신동의가 Y인 대상만</b> 나옵니다</span>
+        <div class="spacer"></div>
+        <button class="btn ghost sm" data-csv="send">CSV</button></div>
+      <div class="card-b">
+        <div class="msg info" style="margin-bottom:11px">
+          동의하지 않은 대상에게 발송하지 않습니다. 동의 여부는 관리대상 탭에서 대상을 눌러 적으십시오.
+          내려받은 파일에는 멤버스 번호가 들어갑니다 — 취급에 주의해 주십시오.
+        </div>
+        <div class="bar">
+          <input type="search" id="qSend" placeholder="검색">
+          <select id="fSendKind"><option value="">종류 전체</option><option>업자</option><option>개인</option></select>
+          <select id="fSendGrade"><option value="">등급 전체</option></select>
+          <select id="fSendStatus"><option value="">상태 전체</option></select>
+        </div>
+      </div>
+      <div class="card-b flush"><div class="tw"><table id="tSend"></table></div></div>
+    </div>
+  </section>
+
+  <!-- ── 기준값 ── -->
+  <section id="pane-cfg" class="hide">
+    <div class="card">
+      <div class="card-h"><h2>기준값</h2><span class="sub">여기 숫자만 고치면 모든 화면이 따라 바뀝니다</span></div>
+      <div class="card-b"><div id="cfgBox"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>이 화면이 지키는 선</h2></div>
+      <div class="card-b" style="font-size:13px;color:var(--ink2);line-height:1.8">
+        1. <b>실명과 휴대전화를 여기에 두지 않습니다.</b> 사장님 PC 엑셀에만 둡니다. 두 곳을 잇는 열쇠는 대상ID 하나입니다.<br>
+        2. 숫자를 이 화면에 저장하지 않습니다. 로그인한 분의 권한으로 BigQuery에서 그때그때 받아옵니다.<br>
+        3. 대상ID는 한 번 매기면 바꾸지 않습니다. 바꾸면 지난 접촉이력이 끊깁니다.<br>
+        4. 고친 사람과 고친 시각이 모든 줄에 남습니다.<br>
+        5. 계정을 잘못 묶으면 남의 매출이 통째로 붙습니다. 묶기 전에 멤버스 번호를 반드시 대조하십시오.
+      </div>
+    </div>
+  </section>
+
+  <p class="foot">
+    고액구매고객 관리 · 홍실장<br>
+    실명·휴대전화는 이 화면에 없습니다. 사장님 PC 엑셀에만 둡니다.
+  </p>
+</div>
+</div>
+
+<div id="busy" class="busy hide"><div id="busyTxt">불러오는 중…</div></div>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+/* ════════════════════════════════════════════════════════════════════
+   고액구매고객 관리 — BigQuery 직결 화면
+
+   ■ 지키는 선
+     1. 실명·휴대전화를 다루지 않는다. 대상ID와 멤버스 번호로만 가리킨다.
+     2. 주소를 코드에 박지 않는다. window.location.origin 을 그대로 쓴다.
+        그래서 로컬에서 만든 것을 그대로 올려도 고칠 데가 없다.
+     3. 클라이언트 보안 비밀번호를 쓰지 않는다. 브라우저에는 필요하지 않다.
+     4. 사람이 적는 값은 전부 파라미터로 보낸다. 따옴표가 들어가도 깨지지 않고
+        SQL 이 뒤틀리지 않는다.
+     5. 고친 사람과 시각을 모든 쓰기에 함께 남긴다.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* 프로젝트·데이터셋·클라이언트ID 를 코드에 박지 않는다.
+   이 파일은 공개된 자리에 올라가므로, 어디에 붙는 화면인지 코드만 보고
+   알 수 없게 둔다. 세 값은 처음 한 번 넣으시면 이 브라우저에만 남는다. */
+var PROJECT = '';
+var DATASET = '';
+var SCOPE   = 'https://www.googleapis.com/auth/bigquery email';
+var LS = { cid:'crm_client_id', proj:'crm_project', ds:'crm_dataset' };
+
+var token = null, tokenClient = null, me = '';
+var D = { subj:[], cand:[], hist:[], cfg:[], send:[], acc:[] };
+var sortState = {};
+var selected = null;      // 펼친 관리대상
+var picked = {};          // 후보에서 고른 회원키
+
+/* ── 쪽지 ── */
+function say(where, kind, html){
+  var el = document.getElementById(where);
+  if(!el) return;
+  if(!kind){ el.innerHTML = ''; return; }
+  el.innerHTML = '<div class="msg '+kind+'">'+html+'</div>';
+}
+function busy(on, txt){
+  document.getElementById('busy').classList.toggle('hide', !on);
+  if(txt) document.getElementById('busyTxt').textContent = txt;
+}
+function esc(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── 숫자 ── */
+function won(v){ return v==null||v===''?'':Number(v).toLocaleString('ko-KR'); }
+function eok(v){
+  if(v==null||v==='') return '';
+  var n = Number(v);
+  if(Math.abs(n) >= 100000000) return (n/100000000).toFixed(1)+'억';
+  if(Math.abs(n) >= 10000)     return Math.round(n/10000).toLocaleString('ko-KR')+'만';
+  return n.toLocaleString('ko-KR');
+}
+function pct(v, d){ return v==null||v===''?'':Number(v).toFixed(d==null?1:d)+'%'; }
+
+/* ════════════════ 인증 ════════════════ */
+function initAuth(){
+  document.getElementById('curOrigin').textContent = location.origin + location.pathname;
+  try{
+    document.getElementById('clientId').value = localStorage.getItem(LS.cid)  || '';
+    document.getElementById('projId').value   = localStorage.getItem(LS.proj) || '';
+    document.getElementById('dsId').value     = localStorage.getItem(LS.ds)   || '';
+  }catch(e){}
+}
+/* 프로젝트·데이터셋 이름은 구글이 허용하는 글자만 받는다.
+   테이블 이름 자리에 들어가는 값이라 여기서 반드시 막는다. */
+function okName(v, kind){
+  if(kind === 'proj') return /^[a-zA-Z0-9][a-zA-Z0-9-]{4,29}$/.test(v);
+  return /^[A-Za-z0-9_]{1,1024}$/.test(v);
+}
+
+function login(){
+  var cid = document.getElementById('clientId').value.trim();
+  var pj  = document.getElementById('projId').value.trim();
+  var ds  = document.getElementById('dsId').value.trim();
+  if(!cid){ say('gateMsg','err','클라이언트 ID를 먼저 넣어 주십시오.'); return; }
+  if(!okName(pj,'proj')){ say('gateMsg','err','프로젝트 ID 를 확인해 주십시오. 영문·숫자·붙임표만 쓸 수 있습니다.'); return; }
+  if(!okName(ds,'ds')){   say('gateMsg','err','데이터셋 이름을 확인해 주십시오. 영문·숫자·밑줄만 쓸 수 있습니다.'); return; }
+  PROJECT = pj; DATASET = ds;
+  try{ localStorage.setItem(LS.proj, pj); localStorage.setItem(LS.ds, ds); }catch(e){}
+  if(!window.google || !google.accounts || !google.accounts.oauth2){
+    say('gateMsg','err','구글 로그인 스크립트를 아직 못 받았습니다. 잠시 뒤 다시 눌러 주십시오.<br>'+
+      '계속 안 되면 이 화면이 <b>파일로 직접 열린 것</b>일 수 있습니다. 주소(http/https)로 열어야 합니다.');
+    return;
+  }
+  try{ localStorage.setItem(LS.cid, cid); }catch(e){}
+  say('gateMsg','info','구글 창에서 허용해 주십시오…');
+  try{
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: cid, scope: SCOPE,
+      callback: function(resp){
+        if(resp && resp.access_token){ token = resp.access_token; afterLogin(); }
+        else { say('gateMsg','err','토큰을 받지 못했습니다. 클라이언트 ID와 승인된 원본을 확인해 주십시오.'); }
+      },
+      error_callback: function(err){
+        say('gateMsg','err','로그인이 끝나지 않았습니다.<br><pre>'+esc(JSON.stringify(err))+'</pre>'+
+          '<b>승인된 JavaScript 원본</b>에 <code>'+esc(location.origin)+'</code> 이 들어 있는지 보십시오.');
+      }
+    });
+    tokenClient.requestAccessToken();
+  }catch(e){
+    say('gateMsg','err','로그인을 시작하지 못했습니다.<br><pre>'+esc(e.message)+'</pre>');
+  }
+}
+
+async function afterLogin(){
+  document.getElementById('gate').classList.add('hide');
+  document.getElementById('app').classList.remove('hide');
+  // 누가 고쳤는지 남기기 위해 로그인한 계정을 확인한다
+  try{
+    var r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo',
+                        {headers:{'Authorization':'Bearer '+token}});
+    if(r.ok){ var u = await r.json(); me = u.email || u.sub || ''; }
+  }catch(e){}
+  if(!me) me = '(계정 미확인)';
+  document.getElementById('who').textContent = me;
+  loadAll();
+}
+
+function relogin(){
+  if(tokenClient){ tokenClient.requestAccessToken({prompt:''}); return true; }
+  return false;
+}
+
+/* ════════════════ BigQuery ════════════════
+   params 는 {이름:{type:'STRING'|'INT64'|'DATE', value:...}} 꼴이다.
+   사람이 적은 값은 반드시 이 길로 보낸다. */
+async function bq(sql, params){
+  if(!token) throw new Error('로그인이 풀렸습니다.');
+  var body = { query: sql, useLegacySql: false, timeoutMs: 60000, maxResults: 20000 };
+  if(params && Object.keys(params).length){
+    body.parameterMode = 'NAMED';
+    body.queryParameters = Object.keys(params).map(function(k){
+      var p = params[k];
+      return { name:k, parameterType:{type:p.type||'STRING'},
+               parameterValue:{ value: p.value==null ? null : String(p.value) } };
+    });
+  }
+  var url = 'https://bigquery.googleapis.com/bigquery/v2/projects/'+PROJECT+'/queries';
+  var res = await fetch(url, {
+    method:'POST',
+    headers:{'Authorization':'Bearer '+token, 'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  if(res.status === 401){
+    token = null;
+    if(relogin()) throw new Error('로그인을 새로 했습니다. 다시 한 번 눌러 주십시오.');
+    throw new Error('로그인이 만료됐습니다.');
+  }
+  var j = await res.json();
+  if(!res.ok){
+    var m = (j && j.error && j.error.message) || ('HTTP '+res.status);
+    if(res.status === 403) m += '\n\n권한이 없습니다. bigquery.jobUser 와 dataEditor(또는 dataViewer)가 필요합니다.';
+    throw new Error(m);
+  }
+  // 오래 걸리는 작업이면 결과를 따로 받아 온다
+  if(j.jobComplete === false && j.jobReference){
+    j = await poll(j.jobReference.jobId, j.jobReference.location);
+  }
+  return shape(j);
+}
+
+async function poll(jobId, loc){
+  var base = 'https://bigquery.googleapis.com/bigquery/v2/projects/'+PROJECT+'/queries/'+
+             encodeURIComponent(jobId)+'?maxResults=20000&timeoutMs=60000'+(loc?'&location='+encodeURIComponent(loc):'');
+  for(var i=0;i<20;i++){
+    var r = await fetch(base, {headers:{'Authorization':'Bearer '+token}});
+    var j = await r.json();
+    if(!r.ok) throw new Error((j.error&&j.error.message)||('HTTP '+r.status));
+    if(j.jobComplete) return j;
+    await new Promise(function(s){ setTimeout(s, 1500); });
+  }
+  throw new Error('결과를 기다리다 시간이 넘었습니다.');
+}
+
+/* 응답을 다루기 쉬운 객체 배열로 바꾼다 */
+function shape(j){
+  var out = [];
+  if(!j.schema || !j.rows) return out;
+  var fs = j.schema.fields;
+  j.rows.forEach(function(r){
+    var o = {};
+    fs.forEach(function(f, i){
+      var v = r.f[i] ? r.f[i].v : null;
+      if(v === null || v === undefined){ o[f.name] = null; return; }
+      if(f.type === 'INTEGER' || f.type === 'INT64' || f.type === 'FLOAT' ||
+         f.type === 'FLOAT64' || f.type === 'NUMERIC'){
+        o[f.name] = v === '' ? null : Number(v);
+      } else if(f.type === 'BOOLEAN' || f.type === 'BOOL'){
+        o[f.name] = (v === 'true' || v === true);
+      } else {
+        o[f.name] = v;
+      }
+    });
+    out.push(o);
+  });
+  return out;
+}
+
+/* ════════════════ 불러오기 ════════════════ */
+/* 테이블 이름은 사람이 적는 값이 아니므로 파라미터로 보낼 수 없다.
+   대신 화면에서 넣은 값을 글자 검사로 걸러 쓴다. */
+function T(n){ return '`'+PROJECT+'.'+DATASET+'.'+n+'`'; }
+function Q(k){
+  return {
+    subj:'SELECT * FROM '+T('crm_dash')+' ORDER BY revenue DESC',
+    cand:'SELECT * FROM '+T('crm_candidate')+' ORDER BY revenue DESC',
+    hist:'SELECT * FROM '+T('crm_contact')+' ORDER BY contact_date DESC, created_at DESC',
+    cfg :'SELECT name, value, note FROM '+T('crm_config')+' ORDER BY name',
+    /* 발송모수는 화면에서 거르지 않고 뷰에서 받는다. 뷰가 consent_sms='Y' 를
+       이미 걸어 두었으므로, 화면 코드가 잘못되어도 동의 없는 대상이 나오지 않는다. */
+    send:'SELECT * FROM '+T('crm_sendable')+' ORDER BY revenue DESC'
+  }[k];
+}
+
+async function loadAll(){
+  busy(true, '불러오는 중…');
+  say('msg', null);
+  try{
+    var r = await Promise.all([bq(Q('subj')), bq(Q('cand')), bq(Q('hist')), bq(Q('cfg')), bq(Q('send'))]);
+    D.subj = r[0]; D.cand = r[1]; D.hist = r[2]; D.cfg = r[3]; D.send = r[4];
+    var asof = (D.subj[0] && D.subj[0].asof) || (D.cand[0] && D.cand[0].asof) || '';
+    document.getElementById('asof').textContent = asof ? ('자료 최종일 ' + asof) : '';
+    fillSelects();
+    renderAll();
+  }catch(e){
+    say('msg','err','불러오지 못했습니다.<br><pre>'+esc(e.message)+'</pre>');
+  }finally{ busy(false); }
+}
+
+function uniq(arr){ return Array.from(new Set(arr.filter(function(x){return x!=null && x!=='';}))).sort(); }
+
+function fillSelects(){
+  function fill(id, vals, keepFirst){
+    var s = document.getElementById(id); if(!s) return;
+    var cur = s.value;
+    var first = s.querySelector('option').outerHTML;
+    s.innerHTML = first + vals.map(function(v){ return '<option>'+esc(v)+'</option>'; }).join('');
+    if(vals.indexOf(cur) >= 0) s.value = cur;
+  }
+  fill('fStatus', uniq(D.subj.map(function(x){return x.status;})));
+  fill('fGrade',  uniq(D.subj.map(function(x){return x.grade;})));
+  fill('fOwner',  uniq(D.subj.map(function(x){return x.owner;})));
+  fill('fSendGrade',  uniq(D.subj.map(function(x){return x.grade;})));
+  fill('fSendStatus', uniq(D.subj.map(function(x){return x.status;})));
+}
+
+/* ════════════════ 표 그리기 ════════════════ */
+function tag(v){
+  if(v==null||v==='') return '';
+  var c = 't-plain';
+  if(v==='중단'||v==='급감')      c='t-late';
+  else if(v==='급증')             c='t-up';
+  else if(v==='신규')             c='t-acc';
+  else if(v==='정상')             c='t-ok';
+  else if(v==='체결')             c='t-ok';
+  else if(v==='협의중'||v==='신규') c='t-wait';
+  else if(v==='보류'||v==='중단'||v==='차단') c='t-late';
+  else if(v==='업자')             c='t-acc';
+  else if(v==='개인')             c='t-plain';
+  else if(v==='Y')                c='t-ok';
+  else if(v==='N')                c='t-late';
+  return '<span class="tag '+c+'">'+esc(v)+'</span>';
+}
+
+function drawTable(tblId, cols, rows, onRow){
+  var t = document.getElementById(tblId);
+  var st = sortState[tblId];
+  if(st){
+    var c = cols.filter(function(x){return x.k===st.k;})[0];
+    rows = rows.slice().sort(function(a,b){
+      var av=a[st.k], bv=b[st.k];
+      if(av==null && bv==null) return 0;
+      if(av==null) return 1;
+      if(bv==null) return -1;
+      if(typeof av==='number' && typeof bv==='number') return st.d*(av-bv);
+      return st.d*String(av).localeCompare(String(bv),'ko');
+    });
+  }
+  var head = '<thead><tr>' + cols.map(function(c){
+    var ar = (st && st.k===c.k) ? (st.d>0?'▲':'▼') : '';
+    return '<th class="'+(c.cls||'')+(c.sort===false?' no-sort':'')+'" data-k="'+esc(c.k)+'">'+
+           esc(c.t)+' <span class="ar">'+ar+'</span></th>';
+  }).join('') + '</tr></thead>';
+  var body = rows.length ? ('<tbody>' + rows.map(function(r, i){
+    return '<tr data-i="'+i+'"'+(onRow&&selected&&r.subject_id===selected?' class="sel"':'')+'>' +
+      cols.map(function(c){
+        var v = c.f ? c.f(r[c.k], r) : esc(r[c.k]==null?'':r[c.k]);
+        return '<td class="'+(c.cls||'')+'">'+(v==null?'':v)+'</td>';
+      }).join('') + '</tr>';
+  }).join('') + '</tbody>')
+   : '<tbody><tr><td colspan="'+cols.length+'"><div class="empty">해당하는 것이 없습니다.</div></td></tr></tbody>';
+  t.innerHTML = head + body;
+
+  t.querySelectorAll('thead th').forEach(function(th){
+    if(th.classList.contains('no-sort')) return;
+    th.onclick = function(){
+      var k = th.getAttribute('data-k');
+      var cur = sortState[tblId];
+      sortState[tblId] = (cur && cur.k===k) ? {k:k, d:-cur.d} : {k:k, d:-1};
+      renderAll();
+    };
+  });
+  if(onRow){
+    t.querySelectorAll('tbody tr[data-i]').forEach(function(tr){
+      tr.onclick = function(ev){
+        if(ev.target.tagName==='INPUT' || ev.target.tagName==='BUTTON') return;
+        onRow(rows[Number(tr.getAttribute('data-i'))]);
+      };
+    });
+  }
+  t._rows = rows;
+  return rows;
+}
+
+function kpis(boxId, items){
+  document.getElementById(boxId).innerHTML = items.map(function(it){
+    return '<div class="kpi"><div class="k">'+esc(it.k)+'</div><div class="v mono">'+it.v+
+           '</div><div class="n">'+(it.n||'')+'</div></div>';
+  }).join('');
+}
+
+/* ════════════════ 걸러내기 ════════════════ */
+function hit(r, q, keys){
+  if(!q) return true;
+  q = q.toLowerCase();
+  return keys.some(function(k){ return String(r[k]==null?'':r[k]).toLowerCase().indexOf(q) >= 0; });
+}
+function val(id){ var e=document.getElementById(id); return e?e.value:''; }
+function chk(id){ var e=document.getElementById(id); return e?e.checked:false; }
+
+function fSubj(){
+  var q=val('qSubj'), k=val('fKind'), s=val('fStatus'), g=val('fGrade'), o=val('fOwner'), a=val('fAlert');
+  return D.subj.filter(function(r){
+    return hit(r,q,['subject_id','alias','member_nos','top_brand','memo','owner','grade'])
+      && (!k || r.kind===k) && (!s || r.status===s) && (!g || r.grade===g)
+      && (!o || r.owner===o) && (!a || r.alert===a);
+  });
+}
+function fCand(){
+  var q=val('qCand'), t=val('fCandType'), a=val('fCandAlert'), m=Number(val('fCandMin')||0);
+  return D.cand.filter(function(r){
+    var tOk = !t || (t==='__null' ? r.member_type==null : r.member_type===t);
+    return hit(r,q,['member_key','offline_no','top_brand','channel_group'])
+      && tOk && (!a || r.alert===a) && (!m || (r.revenue||0) >= m);
+  });
+}
+function fAlertRows(){
+  var q=val('qAlert'), kind=val('fAlertKind'), t=val('fAlertType');
+  var rows = [];
+  if(kind !== '후보'){
+    D.subj.forEach(function(r){
+      if(r.alert && r.alert!=='정상') rows.push({
+        src:'등재', id:r.subject_id, name:r.alias, kind:r.kind, type:r.member_types,
+        revenue:r.revenue, cur:r.cur_revenue, prev:r.prev_revenue, mom:r.mom_pct,
+        last:r.last_order, days:r.days_since_last, alert:r.alert,
+        status:r.status, owner:r.owner, brand:r.top_brand
+      });
+    });
+  }
+  if(kind !== '등재'){
+    D.cand.forEach(function(r){
+      if(r.alert && r.alert!=='정상') rows.push({
+        src:'후보', id:r.member_key, name:r.offline_no, kind:'-', type:r.member_type,
+        revenue:r.revenue, cur:r.cur_revenue, prev:r.prev_revenue, mom:r.mom_pct,
+        last:r.last_order, days:r.days_since_last, alert:r.alert,
+        status:'', owner:'', brand:r.top_brand
+      });
+    });
+  }
+  return rows.filter(function(r){
+    return hit(r,q,['id','name','brand','type']) && (!t || r.alert===t);
+  });
+}
+function fHist(){
+  var q=val('qHist'), due=chk('fHistDue');
+  var today = new Date().toISOString().slice(0,10);
+  return D.hist.filter(function(r){
+    var dOk = !due || (r.next_due && r.next_due <= today);
+    return hit(r,q,['subject_id','content','reaction','next_action','method','recorder']) && dOk;
+  });
+}
+function fSend(){
+  var q=val('qSend'), k=val('fSendKind'), g=val('fSendGrade'), s=val('fSendStatus');
+  /* D.send 는 crm_sendable 뷰에서 온 것이라 이미 동의 Y 만 들어 있다.
+     여기서 다시 한 번 거르는 것은 겹겹이 막기 위함이다. */
+  return D.send.filter(function(r){
+    return r.consent_sms !== 'N'
+      && hit(r,q,['subject_id','alias','member_nos','top_brand'])
+      && (!k || r.kind===k) && (!g || r.grade===g) && (!s || r.status===s);
+  });
+}
+
+/* ════════════════ 화면 그리기 ════════════════ */
+function renderAll(){
+  /* ── 관리대상 ── */
+  var s = fSubj();
+  kpis('subjKpi', [
+    {k:'관리대상',   v:s.length.toLocaleString('ko-KR'), n:'업자 '+s.filter(function(x){return x.kind==='업자';}).length+
+        ' · 개인 '+s.filter(function(x){return x.kind==='개인';}).length},
+    {k:'묶인 계정',  v:s.reduce(function(a,b){return a+(b.accounts||0);},0).toLocaleString('ko-KR'), n:'개'},
+    {k:'매출 합',    v:eok(s.reduce(function(a,b){return a+(b.revenue||0);},0)), n:'원'},
+    {k:'이상 움직임',v:s.filter(function(x){return x.alert && x.alert!=='정상';}).length.toLocaleString('ko-KR'),
+        n:'중단 '+s.filter(function(x){return x.alert==='중단';}).length+
+          ' · 급감 '+s.filter(function(x){return x.alert==='급감';}).length+
+          ' · 급증 '+s.filter(function(x){return x.alert==='급증';}).length},
+    {k:'문자동의',   v:s.filter(function(x){return x.consent_sms==='Y';}).length.toLocaleString('ko-KR'),
+        n:'미확인 '+s.filter(function(x){return x.consent_sms!=='Y' && x.consent_sms!=='N';}).length}
+  ]);
+  drawTable('tSubj', [
+    {k:'subject_id', t:'대상ID'},
+    {k:'kind',    t:'종류', f:function(v){return tag(v);}},
+    {k:'alias',   t:'별칭'},
+    {k:'grade',   t:'등급', f:function(v){return v?tag(v):'<span class="sub">–</span>';}},
+    {k:'status',  t:'상태', f:function(v){return tag(v);}},
+    {k:'owner',   t:'담당', f:function(v){return v?esc(v):'<span class="sub">–</span>';}},
+    {k:'accounts',t:'계정', cls:'num'},
+    {k:'member_types', t:'유형'},
+    {k:'revenue', t:'매출', cls:'num', f:function(v){return won(v);}},
+    {k:'product_margin_pct', t:'상품이익율', cls:'num', f:function(v){return pct(v,2);}},
+    {k:'cur_revenue',  t:'최근월', cls:'num', f:function(v){return eok(v);}},
+    {k:'prev_revenue', t:'전월',   cls:'num', f:function(v){return eok(v);}},
+    {k:'mom_pct', t:'전월대비', cls:'num', f:function(v){return v==null?'':pct(v,1);}},
+    {k:'last_order', t:'최근주문'},
+    {k:'days_since_last', t:'경과', cls:'num', f:function(v){return v==null?'':v+'일';}},
+    {k:'alert',   t:'움직임', f:function(v){return tag(v);}},
+    {k:'consent_sms', t:'동의', f:function(v){return tag(v);}},
+    {k:'last_contact', t:'최근접촉', f:function(v,r){
+        return v ? esc(v)+' <span class="sub">('+esc(r.contact_cnt)+')</span>' : '<span class="sub">–</span>';}},
+    {k:'next_action', t:'다음할일', cls:'wrap', f:function(v,r){
+        if(!v) return '<span class="sub">–</span>';
+        var late = r.next_due && r.next_due <= new Date().toISOString().slice(0,10);
+        return (late?'<span class="tag t-late">기한</span> ':'')+esc(v)+(r.next_due?' <span class="sub">'+esc(r.next_due)+'</span>':'');}}
+  ], s, openDetail);
+  document.getElementById('cSubj').textContent = s.length;
+
+  /* ── 등록후보 ── */
+  var c = fCand();
+  var pickN = Object.keys(picked).length;
+  kpis('candKpi', [
+    {k:'후보',      v:c.length.toLocaleString('ko-KR'), n:'명'},
+    {k:'매출 합',   v:eok(c.reduce(function(a,b){return a+(b.revenue||0);},0)), n:'원'},
+    {k:'일반',      v:c.filter(function(x){return x.member_type==='일반';}).length.toLocaleString('ko-KR'), n:'명 · 진짜 우량고객'},
+    {k:'리셀·특판', v:c.filter(function(x){return x.member_type==='리셀'||x.member_type==='특판';}).length.toLocaleString('ko-KR'), n:'명 · 업자 성격'},
+    {k:'이상 움직임',v:c.filter(function(x){return x.alert && x.alert!=='정상';}).length.toLocaleString('ko-KR'), n:'명'}
+  ]);
+  drawTable('tCand', [
+    {k:'__pick', t:'고르기', sort:false, f:function(v,r){
+        return '<input type="checkbox" data-pick="'+esc(r.member_key)+'"'+(picked[r.member_key]?' checked':'')+'>';}},
+    {k:'offline_no', t:'멤버스번호'},
+    {k:'member_type', t:'유형', f:function(v){return v?tag(v):'<span class="sub">미판정</span>';}},
+    {k:'channel_group', t:'채널군'},
+    {k:'revenue', t:'매출', cls:'num', f:function(v){return won(v);}},
+    {k:'orders',  t:'주문', cls:'num'},
+    {k:'qty',     t:'수량', cls:'num'},
+    {k:'brands',  t:'브랜드', cls:'num'},
+    {k:'top_brand', t:'주브랜드'},
+    {k:'top_brand_share', t:'주브랜드비중', cls:'num', f:function(v){return v==null?'':pct(v*100,1);}},
+    {k:'product_margin_pct', t:'상품이익율', cls:'num', f:function(v){return pct(v,2);}},
+    {k:'cur_revenue',  t:'최근월', cls:'num', f:function(v){return eok(v);}},
+    {k:'prev_revenue', t:'전월',   cls:'num', f:function(v){return eok(v);}},
+    {k:'mom_pct', t:'전월대비', cls:'num', f:function(v){return v==null?'':pct(v,1);}},
+    {k:'last_order', t:'최근주문'},
+    {k:'days_since_last', t:'경과', cls:'num', f:function(v){return v==null?'':v+'일';}},
+    {k:'alert', t:'움직임', f:function(v){return tag(v);}}
+  ], c);
+  document.getElementById('cCand').textContent = c.length;
+  document.getElementById('candPick').textContent = '고른 것 ' + pickN;
+  document.querySelectorAll('input[data-pick]').forEach(function(cb){
+    cb.onchange = function(){
+      var k = cb.getAttribute('data-pick');
+      if(cb.checked) picked[k] = 1; else delete picked[k];
+      document.getElementById('candPick').textContent = '고른 것 ' + Object.keys(picked).length;
+    };
+  });
+
+  /* ── 이상징후 ── */
+  var a = fAlertRows();
+  drawTable('tAlert', [
+    {k:'src',   t:'구분', f:function(v){return '<span class="tag '+(v==='등재'?'t-acc':'t-plain')+'">'+esc(v)+'</span>';}},
+    {k:'id',    t:'ID'},
+    {k:'name',  t:'별칭·번호'},
+    {k:'type',  t:'유형'},
+    {k:'revenue', t:'기간매출', cls:'num', f:function(v){return won(v);}},
+    {k:'cur',   t:'최근월', cls:'num', f:function(v){return eok(v);}},
+    {k:'prev',  t:'전월',   cls:'num', f:function(v){return eok(v);}},
+    {k:'mom',   t:'전월대비', cls:'num', f:function(v){return v==null?'':pct(v,1);}},
+    {k:'last',  t:'최근주문'},
+    {k:'days',  t:'경과', cls:'num', f:function(v){return v==null?'':v+'일';}},
+    {k:'alert', t:'움직임', f:function(v){return tag(v);}},
+    {k:'status',t:'상태', f:function(v){return v?tag(v):'';}},
+    {k:'owner', t:'담당'},
+    {k:'brand', t:'주브랜드'}
+  ], a);
+  document.getElementById('cAlert').textContent = a.length;
+
+  /* ── 접촉이력 ── */
+  var h = fHist();
+  drawTable('tHist', [
+    {k:'contact_date', t:'일자'},
+    {k:'subject_id',   t:'대상ID', f:function(v){
+        var su = D.subj.filter(function(x){return x.subject_id===v;})[0];
+        return esc(v) + (su && su.alias ? ' <span class="sub">'+esc(su.alias)+'</span>' : '');}},
+    {k:'method',  t:'수단', f:function(v){return v?tag(v):'';}},
+    {k:'content', t:'내용', cls:'wrap'},
+    {k:'reaction',t:'반응', cls:'wrap'},
+    {k:'next_action', t:'다음할일', cls:'wrap'},
+    {k:'next_due', t:'기한', f:function(v){
+        if(!v) return '';
+        var late = v <= new Date().toISOString().slice(0,10);
+        return late ? '<span class="tag t-late">'+esc(v)+'</span>' : esc(v);}},
+    {k:'recorder', t:'기록자'}
+  ], h);
+  document.getElementById('cHist').textContent = h.length;
+
+  /* ── 발송모수 ── */
+  var sd = fSend();
+  drawTable('tSend', [
+    {k:'subject_id', t:'대상ID'},
+    {k:'kind',  t:'종류', f:function(v){return tag(v);}},
+    {k:'alias', t:'별칭'},
+    {k:'grade', t:'등급', f:function(v){return v?tag(v):'';}},
+    {k:'status',t:'상태', f:function(v){return tag(v);}},
+    {k:'owner', t:'담당'},
+    {k:'accounts', t:'계정', cls:'num'},
+    {k:'member_nos', t:'멤버스번호', cls:'wrap'},
+    {k:'revenue', t:'매출', cls:'num', f:function(v){return won(v);}},
+    {k:'last_order', t:'최근주문'},
+    {k:'alert', t:'움직임', f:function(v){return tag(v);}},
+    {k:'top_brand', t:'주브랜드'}
+  ], sd);
+  document.getElementById('cSend').textContent = sd.length;
+
+  /* ── 기준값 ── */
+  document.getElementById('cfgBox').innerHTML =
+    '<div class="dgrid">' + D.cfg.map(function(r){
+      return '<div class="fld"><span>'+esc(r.name)+'</span>'+
+        '<input type="number" data-cfg="'+esc(r.name)+'" value="'+esc(r.value)+'">'+
+        '<span style="font-size:11px">'+esc(r.note||'')+'</span></div>';
+    }).join('') + '</div>' +
+    '<div class="bar" style="margin-top:12px"><button class="btn" id="btnCfgSave">기준값 저장</button>'+
+    '<span class="sub">저장하면 모든 화면이 새 기준으로 다시 계산됩니다.</span></div>';
+  var bcs = document.getElementById('btnCfgSave');
+  if(bcs) bcs.onclick = saveCfg;
+
+  if(selected) openDetail(D.subj.filter(function(x){return x.subject_id===selected;})[0], true);
+}
+
+/* ════════════════ 상세 — 대상 하나 ════════════════ */
+async function openDetail(r, keep){
+  if(!r){ document.getElementById('detail').classList.add('hide'); selected=null; return; }
+  selected = r.subject_id;
+  var box = document.getElementById('detail');
+  box.classList.remove('hide');
+  box.innerHTML =
+    '<div class="card-h"><h2>'+esc(r.subject_id)+' · '+esc(r.alias||'(별칭 없음)')+'</h2>'+
+      '<span class="sub">'+esc(r.kind||'')+' · 계정 '+(r.accounts||0)+'개 · 매출 '+won(r.revenue)+'원</span>'+
+      '<div class="spacer"></div>'+
+      '<button class="btn ghost sm" id="btnClose">닫기</button></div>'+
+    '<div class="card-b">'+
+      '<div id="dMsg"></div>'+
+      '<div class="dgrid">'+
+        fld('등급','d_grade','text',r.grade)+
+        sel('상태','d_status',['신규','협의중','체결','보류','중단','차단'],r.status)+
+        fld('담당','d_owner','text',r.owner)+
+        sel('문자수신동의','d_consent',['미확인','Y','N'],r.consent_sms||'미확인')+
+        fld('별칭','d_alias','text',r.alias)+
+        fld('최초접촉일','d_first','date',r.first_contact)+
+      '</div>'+
+      '<div class="fld" style="margin-top:11px"><span>메모</span>'+
+        '<textarea id="d_memo">'+esc(r.memo||'')+'</textarea></div>'+
+      '<div class="bar" style="margin-top:11px">'+
+        '<button class="btn" id="btnSaveSubj">저장</button>'+
+        '<span class="sub">마지막 수정 '+esc(r.updated_at||'–')+' · '+esc(r.updated_by||'–')+'</span></div>'+
+
+      '<div class="sect">묶인 계정</div>'+
+      '<div class="tw" style="max-height:30vh"><table id="tAcc"></table></div>'+
+      '<div class="bar" style="margin-top:9px">'+
+        '<input type="text" id="d_addkey" placeholder="회원키 A0000000000 또는 멤버스번호" style="min-width:250px">'+
+        '<button class="btn ghost sm" id="btnAddAcc">이 계정을 이 대상에 묶기</button>'+
+        '<span class="sub">묶기 전에 번호를 반드시 대조하십시오. 잘못 묶으면 남의 매출이 붙습니다.</span></div>'+
+
+      '<div class="sect">접촉이력</div>'+
+      '<div class="tw" style="max-height:30vh"><table id="tAccHist"></table></div>'+
+      '<div class="dgrid" style="margin-top:11px">'+
+        fld('일자','c_date','date',new Date().toISOString().slice(0,10))+
+        sel('수단','c_method',['전화','문자','대면','메일','기타'],'전화')+
+        fld('다음할일 기한','c_due','date','')+
+      '</div>'+
+      '<div class="dgrid" style="margin-top:9px">'+
+        '<div class="fld"><span>보낸 내용 · 나눈 이야기</span><textarea id="c_content"></textarea></div>'+
+        '<div class="fld"><span>상대 반응</span><textarea id="c_reaction"></textarea></div>'+
+        '<div class="fld"><span>다음 할 일</span><textarea id="c_next"></textarea></div>'+
+      '</div>'+
+      '<div class="bar" style="margin-top:9px">'+
+        '<button class="btn" id="btnAddContact">이력 남기기</button>'+
+        '<span class="sub">실명을 적지 마십시오. 대상ID로 이미 가리키고 있습니다.</span></div>'+
+    '</div>';
+
+  document.getElementById('btnClose').onclick = function(){ openDetail(null); renderAll(); };
+  document.getElementById('btnSaveSubj').onclick = saveSubject;
+  document.getElementById('btnAddContact').onclick = addContact;
+  document.getElementById('btnAddAcc').onclick = addAccount;
+
+  drawTable('tAccHist', [
+    {k:'contact_date', t:'일자'},
+    {k:'method',  t:'수단', f:function(v){return v?tag(v):'';}},
+    {k:'content', t:'내용', cls:'wrap'},
+    {k:'reaction',t:'반응', cls:'wrap'},
+    {k:'next_action', t:'다음할일', cls:'wrap'},
+    {k:'next_due', t:'기한'},
+    {k:'recorder', t:'기록자'}
+  ], D.hist.filter(function(x){ return x.subject_id===r.subject_id; }));
+
+  try{
+    var acc = await bq('SELECT * FROM `'+PROJECT+'.'+DATASET+'.crm_accounts` WHERE subject_id=@id ORDER BY revenue DESC',
+                       {id:{type:'STRING', value:r.subject_id}});
+    drawTable('tAcc', [
+      {k:'member_key', t:'회원키'},
+      {k:'offline_no', t:'멤버스번호'},
+      {k:'is_rep', t:'대표', f:function(v){return v==='Y'?'<span class="tag t-acc">대표</span>':'';}},
+      {k:'member_type', t:'유형', f:function(v){return v?tag(v):'<span class="sub">미판정</span>';}},
+      {k:'channel_group', t:'채널군'},
+      {k:'revenue', t:'매출', cls:'num', f:function(v){return won(v);}},
+      {k:'share_in_subject', t:'대상내비중', cls:'num', f:function(v){return v==null?'':pct(v*100,1);}},
+      {k:'orders', t:'주문', cls:'num'},
+      {k:'top_brand', t:'주브랜드'},
+      {k:'product_margin_pct', t:'상품이익율', cls:'num', f:function(v){return pct(v,2);}},
+      {k:'first_order', t:'첫주문'},
+      {k:'last_order', t:'최근주문'},
+      {k:'alert', t:'움직임', f:function(v){return tag(v);}},
+      {k:'note', t:'비고', cls:'wrap'}
+    ], acc);
+  }catch(e){
+    say('dMsg','err','계정 명단을 불러오지 못했습니다.<br><pre>'+esc(e.message)+'</pre>');
+  }
+  if(!keep) box.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+function fld(label, id, type, v){
+  return '<div class="fld"><span>'+esc(label)+'</span><input id="'+id+'" type="'+type+'" value="'+esc(v==null?'':v)+'"></div>';
+}
+function sel(label, id, opts, v){
+  return '<div class="fld"><span>'+esc(label)+'</span><select id="'+id+'">'+
+    opts.map(function(o){ return '<option'+(o===v?' selected':'')+'>'+esc(o)+'</option>'; }).join('')+
+    '</select></div>';
+}
+function gv(id){ var e=document.getElementById(id); return e ? (e.value===''?null:e.value) : null; }
+
+/* ════════════════ 쓰기 ════════════════ */
+async function saveSubject(){
+  if(!selected) return;
+  busy(true,'저장하는 중…');
+  try{
+    await bq(
+      'UPDATE '+T('crm_subject')+' SET '+
+      ' grade=@grade, status=@status, owner=@owner, consent_sms=@consent,'+
+      ' alias=@alias, first_contact=@first, memo=@memo,'+
+      ' updated_at=CURRENT_TIMESTAMP(), updated_by=@me'+
+      ' WHERE subject_id=@id',
+      { grade:{type:'STRING',value:gv('d_grade')}, status:{type:'STRING',value:gv('d_status')},
+        owner:{type:'STRING',value:gv('d_owner')}, consent:{type:'STRING',value:gv('d_consent')},
+        alias:{type:'STRING',value:gv('d_alias')}, first:{type:'DATE',value:gv('d_first')},
+        memo:{type:'STRING',value:gv('d_memo')},  me:{type:'STRING',value:me},
+        id:{type:'STRING',value:selected} });
+    say('msg','ok','저장했습니다.');
+    await loadAll();
+  }catch(e){ say('dMsg','err','저장하지 못했습니다.<br><pre>'+esc(e.message)+'</pre>'); }
+  finally{ busy(false); }
+}
+
+async function addContact(){
+  if(!selected) return;
+  if(!gv('c_content') && !gv('c_reaction') && !gv('c_next')){
+    say('dMsg','err','내용·반응·다음할일 가운데 하나는 적어 주십시오.'); return;
+  }
+  busy(true,'이력을 남기는 중…');
+  try{
+    await bq(
+      'INSERT INTO '+T('crm_contact')+''+
+      ' (contact_id, subject_id, contact_date, method, content, reaction, next_action, next_due, recorder, created_at)'+
+      ' VALUES (GENERATE_UUID(), @id, @d, @m, @c, @r, @n, @due, @me, CURRENT_TIMESTAMP())',
+      { id:{type:'STRING',value:selected}, d:{type:'DATE',value:gv('c_date')},
+        m:{type:'STRING',value:gv('c_method')}, c:{type:'STRING',value:gv('c_content')},
+        r:{type:'STRING',value:gv('c_reaction')}, n:{type:'STRING',value:gv('c_next')},
+        due:{type:'DATE',value:gv('c_due')}, me:{type:'STRING',value:me} });
+    say('msg','ok','이력을 남겼습니다.');
+    await loadAll();
+  }catch(e){ say('dMsg','err','남기지 못했습니다.<br><pre>'+esc(e.message)+'</pre>'); }
+  finally{ busy(false); }
+}
+
+async function addAccount(){
+  var raw = (gv('d_addkey')||'').trim();
+  if(!raw){ say('dMsg','err','회원키나 멤버스번호를 넣어 주십시오.'); return; }
+  var key = /^A\d{10}$/.test(raw) ? raw : ('A' + raw.replace(/\D/g,'').padStart(10,'0'));
+  busy(true,'대조하는 중…');
+  try{
+    var found = await bq('SELECT member_key, offline_no, member_type, revenue FROM `'+
+      PROJECT+'.'+DATASET+'.crm_member_all` WHERE member_key=@k', {k:{type:'STRING',value:key}});
+    if(!found.length){
+      say('dMsg','err','판매 자료에 <b>'+esc(key)+'</b> 이 없습니다. 번호를 다시 확인해 주십시오. 등재하지 않았습니다.');
+      busy(false); return;
+    }
+    var dup = await bq('SELECT subject_id FROM '+T('crm_subject_map')+' WHERE member_key=@k',
+      {k:{type:'STRING',value:key}});
+    if(dup.length){
+      say('dMsg','err','이 계정은 이미 <b>'+esc(dup[0].subject_id)+'</b> 에 묶여 있습니다. 한 계정을 두 대상에 묶지 않습니다.');
+      busy(false); return;
+    }
+    var okMap = await mapAccount(selected, key, 'N',
+      '화면에서 묶음 · 매출 '+won(found[0].revenue)+'원 대조 확인');
+    if(!okMap){
+      say('dMsg','err','묶지 못했습니다. 그 사이 다른 분이 이 계정을 다른 대상에 묶었을 수 있습니다.');
+      busy(false); return;
+    }
+    say('msg','ok','<b>'+esc(key)+'</b> ('+esc(found[0].offline_no)+' · 매출 '+won(found[0].revenue)+'원) 을 묶었습니다.');
+    await loadAll();
+  }catch(e){ say('dMsg','err','묶지 못했습니다.<br><pre>'+esc(e.message)+'</pre>'); }
+  finally{ busy(false); }
+}
+
+async function nextId(prefix){
+  var r = await bq('SELECT subject_id FROM '+T('crm_subject')+
+                   ' WHERE STARTS_WITH(subject_id, @p) ORDER BY subject_id DESC LIMIT 1',
+                   {p:{type:'STRING',value:prefix}});
+  var n = 1;
+  if(r.length){ n = Number(String(r[0].subject_id).replace(prefix,'')) + 1; }
+  return prefix + String(n).padStart(3,'0');
+}
+
+/* 대상을 만든다. 번호를 고르고 넣는 사이에 다른 분이 같은 번호를 쓸 수 있으므로,
+   「그 번호가 아직 없을 때만」 넣고 들어갔는지 확인한다. 부딪히면 다음 번호로 옮긴다.
+   같은 번호를 둘이 쓰면 접촉이력이 섞이고, 섞인 것은 되돌릴 수 없다. */
+async function makeSubject(prefix, kind, alias, grade, memo){
+  for(var tryN = 0; tryN < 6; tryN++){
+    var sid = await nextId(prefix);
+    var res = await bq(
+      'INSERT INTO '+T('crm_subject')+
+      ' (subject_id, kind, alias, grade, status, owner, consent_sms, first_contact, memo, updated_at, updated_by)'+
+      " SELECT @s, @k, @a, @g, '신규', NULL, '미확인', NULL, @memo, CURRENT_TIMESTAMP(), @me" +
+      ' FROM (SELECT 1) WHERE NOT EXISTS ('+
+      '   SELECT 1 FROM '+T('crm_subject')+' WHERE subject_id = @s)',
+      { s:{type:'STRING',value:sid}, k:{type:'STRING',value:kind},
+        a:{type:'STRING',value:alias}, g:{type:'STRING',value:grade},
+        memo:{type:'STRING',value:memo}, me:{type:'STRING',value:me} });
+    if(res.dml === 1) return sid;
+  }
+  throw new Error('대상 번호를 잡지 못했습니다. 다른 분이 동시에 등재하고 있을 수 있습니다. 잠시 뒤 다시 해 주십시오.');
+}
+
+/* 계정을 묶는다. 이미 다른 대상에 묶여 있으면 넣지 않는다. */
+async function mapAccount(sid, key, isRep, note){
+  var res = await bq(
+    'INSERT INTO '+T('crm_subject_map')+
+    ' (subject_id, member_key, is_rep, note, updated_at, updated_by)'+
+    ' SELECT @s, @k, @rep, @note, CURRENT_TIMESTAMP(), @me'+
+    ' FROM (SELECT 1) WHERE NOT EXISTS ('+
+    '   SELECT 1 FROM '+T('crm_subject_map')+' WHERE member_key = @k)',
+    { s:{type:'STRING',value:sid}, k:{type:'STRING',value:key},
+      rep:{type:'STRING',value:isRep}, note:{type:'STRING',value:note||null},
+      me:{type:'STRING',value:me} });
+  return res.dml === 1;
+}
+
+/* 고른 후보를 등재한다. mode='each' 는 각각 개인으로, 'group' 은 한 업자로 묶는다. */
+async function addPicked(mode){
+  var keys = Object.keys(picked);
+  if(!keys.length){ say('msg','err','후보 탭에서 먼저 고르십시오.'); return; }
+  if(mode==='group' && keys.length < 2){
+    say('msg','err','한 업자로 묶으려면 두 계정 이상 고르십시오.'); return;
+  }
+  var alias = prompt(mode==='group'
+      ? '이 업자를 무엇으로 부르겠습니까? (실명을 쓰지 마십시오. 예 · A팀)'
+      : '등급을 무엇으로 두겠습니까? (비워 두셔도 됩니다)', '');
+  if(mode==='group' && !alias){ say('msg','err','별칭 없이 업자를 만들지 않습니다.'); return; }
+  busy(true,'등재하는 중…');
+  try{
+    var skipped = [];
+    if(mode==='group'){
+      var sid = await makeSubject('P', '업자', alias, null, '화면에서 등재 · 계정 '+keys.length+'개');
+      for(var i=0;i<keys.length;i++){
+        var ok = await mapAccount(sid, keys[i], i===0?'Y':'N', null);
+        if(!ok) skipped.push(keys[i]);
+      }
+      say('msg','ok','<b>'+esc(sid)+' '+esc(alias)+'</b> 로 '+(keys.length-skipped.length)+'개 계정을 묶었습니다.'+
+        (skipped.length ? ' 이미 다른 대상에 묶여 있어 건너뛴 것 '+skipped.length+'건 ('+esc(skipped.join(', '))+')' : ''));
+    } else {
+      var made = [];
+      for(var j=0;j<keys.length;j++){
+        var no = (D.cand.filter(function(x){return x.member_key===keys[j];})[0]||{}).offline_no || '';
+        var vid = await makeSubject('V', '개인', '('+no+')', alias||null, '화면에서 등재');
+        var ok2 = await mapAccount(vid, keys[j], 'Y', null);
+        if(ok2) made.push(vid); else skipped.push(keys[j]);
+      }
+      say('msg','ok', made.length+'명을 개인 대상으로 등재했습니다.'+(made.length?' ('+esc(made.join(', '))+')':'')+
+        (skipped.length ? ' 이미 묶여 있어 건너뛴 것 '+skipped.length+'건' : ''));
+    }
+    picked = {};
+    await loadAll();
+  }catch(e){ say('msg','err','등재하지 못했습니다.<br><pre>'+esc(e.message)+'</pre>'); }
+  finally{ busy(false); }
+}
+
+async function newPerson(){
+  var raw = prompt('회원키(A0000000000) 또는 멤버스번호를 넣어 주십시오.');
+  if(!raw) return;
+  var key = /^A\d{10}$/.test(raw.trim()) ? raw.trim() : ('A' + raw.replace(/\D/g,'').padStart(10,'0'));
+  picked = {}; picked[key] = 1;
+  await addPicked('each');
+}
+
+var CFG_MIN = { vip_amount: 1000000, dormant_days: 1, surge_pct: 100, drop_pct: 1 };
+
+async function saveCfg(){
+  var inputs = document.querySelectorAll('input[data-cfg]');
+  /* 문턱을 너무 낮추면 회원 원장 전체가 이 화면과 CSV 로 쏟아진다.
+     63만 명이 브라우저로 내려오는 일을 막기 위해 하한을 둔다. */
+  for(var g=0; g<inputs.length; g++){
+    var nm = inputs[g].getAttribute('data-cfg');
+    var vv = Number(inputs[g].value);
+    if(!isFinite(vv) || vv !== Math.floor(vv)){
+      say('msg','err','<b>'+esc(nm)+'</b> 은 정수로 넣어 주십시오.'); return;
+    }
+    if(CFG_MIN[nm] != null && vv < CFG_MIN[nm]){
+      say('msg','err','<b>'+esc(nm)+'</b> 은 '+won(CFG_MIN[nm])+' 미만으로 둘 수 없습니다.'+
+        (nm==='vip_amount' ? ' 더 내리면 회원 원장 전체가 이 화면으로 내려옵니다.' : '')); return;
+    }
+  }
+  busy(true,'기준값을 저장하는 중…');
+  try{
+    for(var i=0;i<inputs.length;i++){
+      await bq('UPDATE '+T('crm_config')+' SET value=@v,'+
+               ' updated_at=CURRENT_TIMESTAMP(), updated_by=@me WHERE name=@n',
+        { v:{type:'INT64',value:inputs[i].value}, me:{type:'STRING',value:me},
+          n:{type:'STRING',value:inputs[i].getAttribute('data-cfg')} });
+    }
+    say('msg','ok','기준값을 저장했습니다. 새 기준으로 다시 계산했습니다.');
+    await loadAll();
+  }catch(e){ say('msg','err','저장하지 못했습니다.<br><pre>'+esc(e.message)+'</pre>'); }
+  finally{ busy(false); }
+}
+
+/* ════════════════ 내려받기 ════════════════
+   엑셀에서 한글이 깨지지 않게 BOM 을 붙인다. */
+function csv(which){
+  var map = { subj:'tSubj', cand:'tCand', alert:'tAlert', hist:'tHist', send:'tSend' };
+  var t = document.getElementById(map[which]);
+  if(!t || !t._rows || !t._rows.length){ say('msg','err','내려받을 것이 없습니다.'); return; }
+  var ths = Array.from(t.querySelectorAll('thead th')).map(function(th){
+    return th.textContent.replace(/[▲▼]/g,'').trim(); });
+  var keys = Array.from(t.querySelectorAll('thead th')).map(function(th){ return th.getAttribute('data-k'); });
+  var lines = [ths.map(cell).join(',')];
+  t._rows.forEach(function(r){
+    lines.push(keys.map(function(k){ return cell(r[k]); }).join(','));
+  });
+  var name = {subj:'관리대상', cand:'등록후보', alert:'이상징후', hist:'접촉이력', send:'발송모수'}[which];
+  var d = new Date(), ymd = d.getFullYear().toString().slice(2) +
+    String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+  var blob = new Blob(['﻿' + lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '고액고객_' + name + '_' + ymd + '.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function cell(v){
+  if(v==null) return '';
+  var s = String(v);
+  /* 엑셀·시트는 = + - @ 로 시작하는 칸을 수식으로 읽는다. 사장님이 적으신 메모가
+     남의 컴퓨터에서 명령으로 실행되는 길이라, 앞에 작은따옴표를 붙여 글자로 굳힌다.
+     탭·줄바꿈·캐리지리턴으로 시작하는 것도 같이 막는다. */
+  if(/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+  return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+}
+
+/* ════════════════ 탭 ════════════════ */
+function tabTo(name){
+  ['subj','cand','alert','hist','send','cfg'].forEach(function(n){
+    var p = document.getElementById('pane-'+n);
+    if(p) p.classList.toggle('hide', n!==name);
+  });
+  document.querySelectorAll('.tab').forEach(function(b){
+    b.setAttribute('aria-selected', b.getAttribute('data-tab')===name ? 'true' : 'false');
+  });
+}
+
+/* ════════════════ 시작 ════════════════ */
+function bind(){
+  document.getElementById('btnLogin').onclick = login;
+  document.getElementById('btnForget').onclick = function(){
+    try{ localStorage.removeItem(LS.cid); localStorage.removeItem(LS.proj); localStorage.removeItem(LS.ds); }catch(e){}
+    document.getElementById('clientId').value = '';
+    document.getElementById('projId').value = '';
+    say('gateMsg','info','이 브라우저에 저장된 세 값을 지웠습니다.');
+  };
+  document.getElementById('clientId').addEventListener('keydown', function(e){
+    if(e.key==='Enter') login();
+  });
+
+  document.querySelectorAll('.tab').forEach(function(b){
+    b.onclick = function(){ tabTo(b.getAttribute('data-tab')); };
+  });
+  document.querySelectorAll('[data-csv]').forEach(function(b){
+    b.onclick = function(){ csv(b.getAttribute('data-csv')); };
+  });
+
+  document.getElementById('btnReload').onclick = loadAll;
+  document.getElementById('btnOut').onclick = function(){
+    /* 여러 사람이 쓰는 컴퓨터를 가정한다. 화면만 감추면 다음 사람이
+       뒤로가기나 새로고침으로 자료를 다시 본다. 그래서 전부 비운다. */
+    var old = token;
+    token = null; selected = null; picked = {}; me = '';
+    D = { subj:[], cand:[], hist:[], cfg:[], send:[], acc:[] };
+    sortState = {};
+    ['tSubj','tCand','tAlert','tHist','tSend','tAcc','tAccHist'].forEach(function(id){
+      var t = document.getElementById(id); if(t){ t.innerHTML = ''; t._rows = null; }
+    });
+    ['subjKpi','candKpi','cfgBox','detail','msg'].forEach(function(id){
+      var e = document.getElementById(id); if(e) e.innerHTML = '';
+    });
+    document.getElementById('detail').classList.add('hide');
+    document.getElementById('who').textContent = '';
+    document.getElementById('asof').textContent = '';
+    ['cSubj','cCand','cAlert','cHist','cSend'].forEach(function(id){
+      var e = document.getElementById(id); if(e) e.textContent = '';
+    });
+    /* 구글에 준 허락도 되돌린다. 이것을 안 하면 다음 사람이 동의창 없이 들어온다. */
+    try{
+      if(old && window.google && google.accounts && google.accounts.oauth2){
+        google.accounts.oauth2.revoke(old, function(){});
+      }
+    }catch(e){}
+    tokenClient = null;
+    document.getElementById('app').classList.add('hide');
+    document.getElementById('gate').classList.remove('hide');
+    say('gateMsg','info','나왔습니다. 화면에 있던 자료를 모두 비웠습니다.');
+  };
+  document.getElementById('btnTheme').onclick = function(){
+    var cur = document.documentElement.getAttribute('data-theme');
+    var next = cur==='dark' ? 'light' : (cur==='light' ? '' : 'dark');
+    if(next) document.documentElement.setAttribute('data-theme', next);
+    else document.documentElement.removeAttribute('data-theme');
+    try{ localStorage.setItem('crm_theme', next); }catch(e){}
+  };
+  document.getElementById('btnAddOne').onclick   = function(){ addPicked('each'); };
+  document.getElementById('btnAddGroup').onclick = function(){ addPicked('group'); };
+  document.getElementById('btnNewSubj').onclick  = newPerson;
+
+  ['qSubj','fKind','fStatus','fGrade','fOwner','fAlert',
+   'qCand','fCandType','fCandAlert','fCandMin',
+   'qAlert','fAlertKind','fAlertType',
+   'qHist','fHistDue',
+   'qSend','fSendKind','fSendGrade','fSendStatus'].forEach(function(id){
+    var e = document.getElementById(id);
+    if(e) e.addEventListener(e.tagName==='SELECT'||e.type==='checkbox' ? 'change' : 'input', renderAll);
+  });
+}
+
+try{
+  var th = localStorage.getItem('crm_theme');
+  if(th) document.documentElement.setAttribute('data-theme', th);
+}catch(e){}
+
+initAuth();
+bind();
+</script>
+</body>
+</html>
